@@ -494,7 +494,7 @@ function requestAdminAccess() {
   setStep('admin')
 }
 
-function registerAdminLogoTap() {
+function registerAdminLogoTap(): boolean {
   adminLogoTapCount += 1
 
   if (adminLogoTapResetTimer) {
@@ -513,7 +513,10 @@ function registerAdminLogoTap() {
       adminLogoTapResetTimer = null
     }
     requestAdminAccess()
+    return true
   }
+
+  return false
 }
 
 function getBackStep(current: Step): Step | null {
@@ -1251,7 +1254,8 @@ function bindEvents() {
   document.getElementById('floating-cart')?.addEventListener('click', () => setStep('carrinho'))
   document.getElementById('go-home')?.addEventListener('click', (e) => {
     e.preventDefault()
-    registerAdminLogoTap()
+    const openedAdmin = registerAdminLogoTap()
+    if (openedAdmin) return
     if (appState.customer.nomeCompleto) setStep('catalogo')
     else setStep('cadastro')
   })
