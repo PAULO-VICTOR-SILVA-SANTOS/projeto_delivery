@@ -632,6 +632,32 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
   border-radius: 999px; font-size: 0.7rem; font-weight: 800;
   padding: 3px 10px;
 }
+.badge-modelo {
+  position: absolute; top: 8px; left: 8px;
+  background: #0b8f5a; color: #fff;
+  border-radius: 999px; font-size: 0.7rem; font-weight: 800;
+  padding: 3px 10px;
+}
+.produto-modelo-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(11, 143, 90, 0.15);
+  color: #0b6b45;
+  vertical-align: middle;
+}
+.modelo-exemplos-box {
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--line);
+  background: var(--surface-2);
+}
 .price  { font-size: 1.1rem; color: var(--primary-strong); }
 .mt4    { margin-top: 4px; }
 .full-width { width: 100%; }

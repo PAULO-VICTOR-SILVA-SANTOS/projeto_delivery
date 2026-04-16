@@ -35,6 +35,8 @@ type Product = {
   imagem: string
   uso: string
   custom?: boolean // adicionado pelo admin
+  /** Peça de exemplo (imagens em /modelos/); pode remover no painel */
+  modelo?: boolean
 }
 
 type AppState = {
@@ -54,15 +56,75 @@ type AppState = {
   fichaTecnicaId: string | null
 }
 
-// ─── Catálogo base (loja de roupas: começa vazio; o dono cadastra no admin) ───
+// ─── Catálogo base: peças modelo (imagens em /public/modelos/) na primeira visita ───
 
-const defaultProducts: Product[] = []
+function seedModeloProducts(): Product[] {
+  return [
+    {
+      id: 'modelo-camiseta',
+      nome: 'Camiseta básica (exemplo)',
+      marca: 'Modelo',
+      categoria: 'Camisetas e blusas',
+      subcategoria: 'M · Branco',
+      preco: 49.9,
+      imagem: '/modelos/camiseta.svg',
+      uso: 'Exemplo: algodão, gola redonda. Edite preço ou exclua e cadastre suas peças reais.',
+      modelo: true
+    },
+    {
+      id: 'modelo-calca',
+      nome: 'Calça jeans (exemplo)',
+      marca: 'Modelo',
+      categoria: 'Calças e jeans',
+      subcategoria: '42 · Azul',
+      preco: 129.9,
+      imagem: '/modelos/calca.svg',
+      uso: 'Exemplo de descrição. Remova as peças modelo quando não precisar mais.',
+      modelo: true
+    },
+    {
+      id: 'modelo-vestido',
+      nome: 'Vestido midi (exemplo)',
+      marca: 'Modelo',
+      categoria: 'Vestidos e saias',
+      subcategoria: 'P · Floral',
+      preco: 159.9,
+      imagem: '/modelos/vestido.svg',
+      uso: 'Exemplo para vitrine. O cliente vê no catálogo como qualquer outro produto.',
+      modelo: true
+    },
+    {
+      id: 'modelo-shorts',
+      nome: 'Shorts casual (exemplo)',
+      marca: 'Modelo',
+      categoria: 'Shorts e bermudas',
+      subcategoria: 'M · Bege',
+      preco: 79.9,
+      imagem: '/modelos/shorts.svg',
+      uso: 'Substitua por fotos reais das suas peças pelo painel administrativo.',
+      modelo: true
+    },
+    {
+      id: 'modelo-casaco',
+      nome: 'Casaco leve (exemplo)',
+      marca: 'Modelo',
+      categoria: 'Casacos e jaquetas',
+      subcategoria: 'G · Preto',
+      preco: 189.9,
+      imagem: '/modelos/casaco.svg',
+      uso: 'Último exemplo. Use “Remover peças de exemplo” para tirar todos de uma vez.',
+      modelo: true
+    }
+  ]
+}
 
 // ─── Persistência (LocalStorage) ─────────────────────────────────────────────
 
 const STORAGE_KEYS = {
   /** Chave nova para catálogo da loja de roupas (sem produtos de exemplo antigos). */
   products: 'apd_products_roupas',
+  /** Se "1", não carrega mais o catálogo inicial de peças modelo (mesmo com storage limpo). */
+  modelosExemplosRemovidos: 'apd_modelos_exemplos_removidos',
   state: 'apd_state',
   customers: 'apd_customers',
   branding: 'apd_store_branding',
@@ -359,19 +421,23 @@ function normalizeProduct(raw: unknown): Product {
     preco: typeof p.preco === 'number' && !Number.isNaN(p.preco) ? p.preco : 0,
     imagem: String(p.imagem ?? ''),
     uso: String(p.uso ?? ''),
-    custom: p.custom === true
+    custom: p.custom === true,
+    modelo: (p as Partial<Product>).modelo === true
   }
 }
 
 function loadProducts(): Product[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.products)
-    if (raw) {
+    if (raw !== null) {
       const parsed = JSON.parse(raw) as unknown
       if (Array.isArray(parsed)) return parsed.map(normalizeProduct)
     }
   } catch (_) { /* ignora parse error */ }
-  return [...defaultProducts]
+  if (localStorage.getItem(STORAGE_KEYS.modelosExemplosRemovidos) === '1') {
+    return []
+  }
+  return seedModeloProducts()
 }
 
 function saveProducts(list: Product[]) {
@@ -508,6 +574,9 @@ if (appState.customer.nomeCompleto) {
 }
 
 let products = loadProducts()
+if (localStorage.getItem(STORAGE_KEYS.products) === null) {
+  saveProducts(products)
+}
 let customerProfiles = loadCustomerProfiles()
 
 applyDocumentBranding()
@@ -935,6 +1004,7 @@ function catalogProductCardHtml(p: Product): string {
               <img src="${imgSrc}" alt="${escapeHtml(p.nome)}" loading="lazy"
                 onerror="this.src='https://placehold.co/400x220/e8f0fe/1a3a6b?text=Foto'" />
               ${p.custom ? '<span class="badge-custom">Personalizado</span>' : ''}
+              ${p.modelo ? '<span class="badge-modelo">Exemplo</span>' : ''}
             </div>
             <div class="product-body">
               ${chipLine}
@@ -1293,7 +1363,7 @@ function adminScreen() {
             />
           </div>
         </td>
-        <td data-label="Nome">${escapeHtml(p.nome)}</td>
+        <td data-label="Nome">${escapeHtml(p.nome)}${p.modelo ? ' <span class="produto-modelo-tag" title="Peça de exemplo">Modelo</span>' : ''}</td>
         <td data-label="Marca">${escapeHtml(p.marca)}</td>
         <td data-label="Categoria">${escapeHtml(p.categoria)}</td>
         <td data-label="Preço">
@@ -1494,6 +1564,16 @@ function adminScreen() {
 
       <div class="card">
         <h2>Produtos cadastrados (${products.length})</h2>
+        ${
+          products.some((p) => p.modelo)
+            ? `<div class="modelo-exemplos-box">
+                 <p class="muted small" style="margin: 0 0 10px;">
+                   As peças marcadas como <strong>Modelo</strong> usam imagens de exemplo salvas no site (pasta <code>modelos</code>). Você pode editar preços, excluir uma a uma ou remover todas de uma vez.
+                 </p>
+                 <button type="button" class="btn danger" id="remove-modelo-products">Remover todas as peças de exemplo</button>
+               </div>`
+            : ''
+        }
         <p class="muted small" style="margin: 6px 0 14px;">
           Use a coluna <strong>Foto</strong> para conferir se a imagem corresponde à peça antes de alterar preço ou excluir.
         </p>
@@ -2068,7 +2148,8 @@ function bindEvents() {
       preco,
       imagem,
       uso,
-      custom: true
+      custom: true,
+      modelo: false
     }
     products = [...products, newProduct]
     saveProducts(products)
@@ -2106,10 +2187,24 @@ function bindEvents() {
     })
   })
 
+  // Admin – remover só peças de exemplo (modelo)
+  document.getElementById('remove-modelo-products')?.addEventListener('click', () => {
+    const n = products.filter((p) => p.modelo).length
+    if (n === 0) return
+    if (!confirm(`Remover ${n} peça(s) de exemplo do catálogo? Elas deixam de aparecer para o cliente.`)) {
+      return
+    }
+    products = products.filter((p) => !p.modelo)
+    localStorage.setItem(STORAGE_KEYS.modelosExemplosRemovidos, '1')
+    saveProducts(products)
+    render()
+  })
+
   // Admin – esvaziar catálogo
   document.getElementById('reset-products')?.addEventListener('click', () => {
     if (confirm('Remover todos os produtos cadastrados? Esta ação não pode ser desfeita.')) {
       products = []
+      localStorage.setItem(STORAGE_KEYS.modelosExemplosRemovidos, '1')
       saveProducts(products)
       render()
     }
